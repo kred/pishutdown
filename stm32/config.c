@@ -1,4 +1,5 @@
 #include <stm32f0xx.h>
+#include "config.h"
 
 void configure()
 {
@@ -12,24 +13,53 @@ void configure()
 		RCC->CFGR |= RCC_CFGR_HPRE_DIV1;
 		RCC->CFGR &= ~(RCC_CFGR_PPRE);
 		RCC->CFGR |= RCC_CFGR_PPRE_DIV1;
-		RCC->CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLMUL);
-		RCC->CFGR |= RCC_CFGR_PLLSRC_HSI_DIV2 | RCC_CFGR_PLLMUL12; // HSI/2 * 12MHz = 48MHz
 
-		RCC->CR |= RCC_CR_PLLON;
+		// disable external oscillator (even if there is no one)
+		RCC->CR &= ~(RCC_CR_HSEON);
 
-		while((RCC->CR & RCC_CR_PLLRDY) == 0);
-		RCC->CFGR &= ~(RCC_CFGR_SW);
-		RCC->CFGR |= RCC_CFGR_SW_PLL;
-
-		while((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL);
-
-		// We are running 48MHz now - enable peripherals
+		// We are running 8MHz now - enable and configure peripherals
 
 		// GPIO
 		RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOFEN;
 
+		// LED
+		GPIOF->MODER |= GPIO_MODER_MODER0_0; // gpio mode
+		GPIOF->OTYPER &= ~(GPIO_OTYPER_OT_0);
+		GPIOF->OSPEEDR |= GPIO_OSPEEDR_OSPEEDR0;
+		GPIOF->PUPDR &= ~(GPIO_PUPDR_PUPDR0); // no push-up, no pull-down
+
+		// MCU_ENABLE (or PI enable/disable)
+		GPIOB->MODER |= GPIO_MODER_MODER1_0; // gpio mode
+		GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_1);
+		GPIOB->OSPEEDR |= GPIO_OSPEEDR_OSPEEDR1;
+		GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR1); // no push-up, no pull-down
+		GPIOB->PUPDR |= GPIO_PUPDR_PUPDR1_0; // and set to push-up
+
+		// IGNITION sense
+		GPIOF->MODER &= ~(GPIO_MODER_MODER1); // PORTF.1 input
+		GPIOF->PUPDR &= ~(GPIO_PUPDR_PUPDR1);
+		GPIOF->PUPDR |= GPIO_PUPDR_PUPDR1_1; // pull-down
+
+		// HEAD UP open/close sense
+		GPIOA->MODER &= ~(GPIO_MODER_MODER0);
+		GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
+		GPIOA->PUPDR |= GPIO_PUPDR_PUPDR0_1; // pull-down
+
+
+		LED_OFF;
+		PI_OFF;
+
 		// USART
 		RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
+		GPIOA->MODER &= ~(GPIO_MODER_MODER2 | GPIO_MODER_MODER3);
+		GPIOA->MODER |= (GPIO_MODER_MODER2_1 | GPIO_MODER_MODER3_1);
+		GPIOA->AFR[0] &= ~(GPIO_AFRL_AFR2 | GPIO_AFRL_AFR3);
+		GPIOA->AFR[0] |= (1 << 8) | (1 << 12); // AF1 for A.2, A.3
+
+
+		USART1->BRR = 0xD0; // 38400 bauds
+		USART1->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+
 
 	}
 	else
