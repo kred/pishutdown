@@ -1,5 +1,10 @@
 #include <stm32f0xx.h>
 #include "config.h"
+#include "sysevent.h"
+
+volatile uint32_t __systick_counter = 0;
+extern struct Event systick_events[5];
+extern uint32_t systick_registered_events;
 
 void configure()
 {
@@ -45,7 +50,6 @@ void configure()
 		GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
 		GPIOA->PUPDR |= GPIO_PUPDR_PUPDR0_1; // pull-down
 
-
 		LED_OFF;
 		PI_OFF;
 
@@ -61,10 +65,31 @@ void configure()
 		USART1->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
 
 
+		// SysTick every 1ms
+		if (SysTick_Config(8000))
+		{
+			while(1); // failed
+		}
+
 	}
 	else
 	{
 		while(1); // HSI is not up and running, HSE enabled. Not supported so far.
 	}
+
+}
+
+void SysTick_Handler()
+{
+	uint32_t i;
+
+	for(i = 0; i < systick_registered_events; i++)
+	{
+		if(__systick_counter % systick_events[i].ms == 0)
+			systick_events[i].handler();
+	}
+
+	if (++__systick_counter == 1000)
+		__systick_counter = 0;
 
 }

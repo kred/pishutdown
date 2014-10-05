@@ -1,6 +1,7 @@
 #include <stm32f0xx.h>
 #include "config.h"
-
+#include "sysevent.h"
+#include "led.h"
 
 void uart_sendc(char c)
 {
@@ -16,10 +17,14 @@ void uart_sends(char *s)
 	} while(*++s);
 }
 
+
 int main()
 {
 
 	configure();
+	sysevent_init();
+	led_init();
+	led_set(LED_MODE_SHORT);
 
 	uart_sends("Hello World!\r\n");
 
