@@ -52,11 +52,11 @@ void led_init()
 	led_mode_threshold[LED_MODE_FAST].reload_threshold = 200;
 
 	led_mode_threshold[LED_MODE_SHORT].led_on_threshold = 0;
-	led_mode_threshold[LED_MODE_SHORT].led_off_threshold = 100;
+	led_mode_threshold[LED_MODE_SHORT].led_off_threshold = 50;
 	led_mode_threshold[LED_MODE_SHORT].reload_threshold = 1000;
 
 	led_mode_threshold[LED_MODE_LONG].led_on_threshold = 0;
-	led_mode_threshold[LED_MODE_LONG].led_off_threshold = 900;
+	led_mode_threshold[LED_MODE_LONG].led_off_threshold = 950;
 	led_mode_threshold[LED_MODE_LONG].reload_threshold = 1000;
 
 	sysevent_add(led_handler, 1);

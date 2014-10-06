@@ -1,4 +1,5 @@
 #include <stm32f0xx.h>
+#include <core_cm0.h>
 #include "config.h"
 #include "sysevent.h"
 
@@ -62,7 +63,10 @@ void configure()
 
 
 		USART1->BRR = 0xD0; // 38400 bauds
-		USART1->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+		USART1->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
+
+		NVIC_SetPriority(USART1_IRQn, 1);
+		NVIC_EnableIRQ(USART1_IRQn);
 
 
 		// SysTick every 1ms
