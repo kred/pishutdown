@@ -33,3 +33,13 @@ void serial_send_string(char *s)
 		USART1->TDR = *s++;
 	}
 }
+
+void serial_ping()
+{
+	serial_send_string("ping\r\n");
+}
+
+void serial_shutdown()
+{
+	serial_send_string("shutdown\r\n");
+}

@@ -5,9 +5,25 @@
 #include "led.h"
 #include "serial.h"
 
+#define PI_POLL_VALUE 24 // how many time RPi will be 'pinged' before switch off
+#define PI_SHUTDOWN_DELAY_VALUE 120000 // 120000ms delay before shutdown
+
+typedef enum
+{
+	STATE_PI_DISABLED = 0,
+	STATE_ENABLE_PI,
+	STATE_POLL_PI,
+	STATE_PI_ENABLED,
+	STATE_DISABLE_PI,
+	STATE_DISABLE_PI_DELAYED,
+
+} STATES;
+
 int main()
 {
 	EVENTS event;
+	STATES state = STATE_PI_DISABLED;
+	uint32_t pi_poll_counter = 0;
 
 	configure();
 	queue_init();
@@ -15,30 +31,78 @@ int main()
 	serial_init();
 	led_init();
 
+	while(1)
+	{
+		event = queue_get();
 
-	queue_put(EVENT_ENABLE_PI);
+		switch(state)
+		{
+		case STATE_PI_DISABLED:
+			if (event == EVENT_IGNITION_ON)
+			{
+				state = STATE_ENABLE_PI;
+			}
+			break;
 
-    while(1){
-    	event = queue_get();
+		case STATE_ENABLE_PI:
+			PI_ON;
+			led_set(LED_MODE_SHORT);
+			pi_poll_counter = 0;
+			delay_event(5000, EVENT_PING);
+			state = STATE_POLL_PI;
+			break;
 
-    	switch(event)
-    	{
-    	case EVENT_NONE: break;
-    	case EVENT_PING: break;
-    	case EVENT_PONG: break;
-    	case EVENT_ENABLE_PI:
-    		PI_ON;
-    		led_set(LED_MODE_SHORT);
-    		delay_event(5000, EVENT_DISABLE_PI);
-    		break;
-    	case EVENT_DISABLE_PI:
-    		PI_OFF;
-    		led_set(LED_MODE_LONG);
-    		break;
-    	}
+		case STATE_POLL_PI:
+			if (event == EVENT_PONG)
+			{
+				state = STATE_PI_ENABLED;
+			}
+			else if (event == EVENT_PING)
+			{
+				serial_ping();
 
+				if (++pi_poll_counter == PI_POLL_VALUE)
+				{
+					state = STATE_DISABLE_PI;
+				}
+				else
+				{
+					delay_event(5000, EVENT_PING);
+				}
+			}
+			else if (event == EVENT_IGNITION_OFF)
+			{
+				led_set(LED_MODE_FAST);
+				delay_event(PI_SHUTDOWN_DELAY_VALUE, EVENT_DISABLE_PI);
+				state = STATE_DISABLE_PI_DELAYED;
+			}
+			break;
 
-    }
+		case STATE_PI_ENABLED:
+			pi_poll_counter = 0;
+			led_set(LED_MODE_SLOW);
+			state = STATE_POLL_PI;
+			break;
+
+		case STATE_DISABLE_PI:
+			PI_OFF;
+			led_set(LED_MODE_OFF);
+			state = STATE_PI_DISABLED;
+			break;
+
+		case STATE_DISABLE_PI_DELAYED:
+			if (event == EVENT_DISABLE_PI)
+			{
+				state = STATE_DISABLE_PI;
+			}
+			else if (event == EVENT_IGNITION_ON)
+			{
+				state = STATE_PI_ENABLED;
+			}
+			break;
+
+		}
+	}
 
     return 0;
 }

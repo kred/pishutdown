@@ -4,5 +4,7 @@
 void serial_init();
 void serial_send(char *s, uint32_t len);
 void serial_send_string(char *s);
+void serial_ping();
+void serial_shutdown();
 
 #endif
