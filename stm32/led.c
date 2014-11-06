@@ -64,8 +64,11 @@ void led_init()
 
 void led_set(LED_MODE mode)
 {
-	led_mode = mode;
-	led_counter = 0;
+	if (mode != led_mode)
+	{
+		led_mode = mode;
+		led_counter = 0;
+	}
 }
 
 

@@ -5,7 +5,8 @@
 #include "led.h"
 #include "serial.h"
 
-#define PI_POLL_VALUE 24 // how many time RPi will be 'pinged' before switch off
+#define PI_POLL_VALUE 24 // how many times RPi will be 'ping' before switch off
+#define PI_POLL_DELAY_VALUE 5000 // 5000ms between pings
 #define PI_SHUTDOWN_DELAY_VALUE 120000 // 120000ms delay before shutdown
 
 typedef enum
@@ -48,7 +49,7 @@ int main()
 			PI_ON;
 			led_set(LED_MODE_SHORT);
 			pi_poll_counter = 0;
-			delay_event(5000, EVENT_PING);
+			delay_event(PI_POLL_DELAY_VALUE, EVENT_PING);
 			state = STATE_POLL_PI;
 			break;
 
@@ -59,15 +60,14 @@ int main()
 			}
 			else if (event == EVENT_PING)
 			{
-				serial_ping();
-
 				if (++pi_poll_counter == PI_POLL_VALUE)
 				{
 					state = STATE_DISABLE_PI;
 				}
 				else
 				{
-					delay_event(5000, EVENT_PING);
+					serial_ping();
+					delay_event(PI_POLL_DELAY_VALUE, EVENT_PING);
 				}
 			}
 			else if (event == EVENT_IGNITION_OFF)
