@@ -50,6 +50,7 @@ int main()
 			led_set(LED_MODE_SHORT);
 			pi_poll_counter = 0;
 			delay_event(PI_POLL_DELAY_VALUE, EVENT_PING);
+//			if (SCREEN_STATUS)
 			state = STATE_POLL_PI;
 			break;
 

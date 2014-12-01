@@ -60,7 +60,7 @@ void configure()
 		GPIOA->AFR[0] |= (1 << 8) | (1 << 12); // AF1 for A.2, A.3
 
 
-		USART1->BRR = 0xD0; // 38400 bauds
+		USART1->BRR = 0xD0; // 38400 bauds 8N1
 		USART1->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | USART_CR1_RXNEIE;
 
 		NVIC_SetPriority(USART1_IRQn, 1);
