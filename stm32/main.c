@@ -29,11 +29,13 @@ int main()
 	configure();
 	queue_init();
 	sysevent_init();
-	serial_init();
 	led_init();
+
 
 	while(1)
 	{
+		serial_check();
+
 		event = queue_get();
 
 		switch(state)
@@ -74,6 +76,7 @@ int main()
 			else if (event == EVENT_IGNITION_OFF)
 			{
 				led_set(LED_MODE_FAST);
+				serial_shutdown();
 				delay_event(PI_SHUTDOWN_DELAY_VALUE, EVENT_DISABLE_PI);
 				state = STATE_DISABLE_PI_DELAYED;
 			}
@@ -98,6 +101,8 @@ int main()
 			}
 			else if (event == EVENT_IGNITION_ON)
 			{
+				delay_event_cancel(); // cancel EVENT_DISABLE_PI
+				delay_event(PI_POLL_DELAY_VALUE, EVENT_PING);
 				state = STATE_PI_ENABLED;
 			}
 			break;

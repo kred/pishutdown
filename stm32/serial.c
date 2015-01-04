@@ -1,9 +1,14 @@
 #include <stm32f0xx.h>
 #include <stdint.h>
+#include <core_cm0.h>
 #include "serial.h"
 #include "eventqueue.h"
 
 #define COMMAND_LENGTH 16
+
+
+volatile uint8_t serial_buffer[COMMAND_LENGTH];
+volatile uint8_t serial_offset = 0;
 
 typedef struct
 {
@@ -16,16 +21,15 @@ Command commands[] = {
 		{ "ack", EVENT_ACK },
 };
 
-
-static void shift_left(uint8_t *buf)
+static void shift_left(volatile uint8_t *buf)
 {
     uint8_t i;
-    for(i = 1; i < COMMAND_LENGTH; i++)
-        buf[i-1] = buf[i];
+    for(i = 8; i < COMMAND_LENGTH; i++)
+        buf[i-8] = buf[i];
     buf[COMMAND_LENGTH-1] = '\0';
 }
 
-static void clear(uint8_t *buf)
+static void clear(volatile uint8_t *buf)
 {
     uint8_t i;
     for(i = 0; i < COMMAND_LENGTH; i++)
@@ -70,50 +74,54 @@ static uint8_t find_command(uint8_t *buf, EVENTS *event)
             found = (found == len);
 
             if (found)
-                break;
+            {
+            	*event = commands[comm].event;
+                return found;
+            }
         }
 
-        if (found)
-            break;
     }
-
-    *event = commands[comm].event;
 
     return found;
 }
 
 void USART1_IRQHandler()
 {
-    static uint8_t buf[COMMAND_LENGTH];
-    static uint8_t i = 0;
-    EVENTS event;
-
-
 	if (USART1->ISR & USART_ISR_RXNE)
 	{
-	    if (i == 0)
-	        clear(buf);
+	    if (serial_offset == 0)
+	        clear(serial_buffer);
 
-	    buf[i++] = USART1->RDR;
+	    serial_buffer[serial_offset++] = USART1->RDR;
 
-	    if (find_command(buf, &event) == 1)
-	    {
-			queue_put(event);
-	        i = 0;
-	    }
-	    else
-	    {
-	        if (i == COMMAND_LENGTH)
-	        {
-	            shift_left(buf);
-	            i = COMMAND_LENGTH - 1;
-	        }
-	    }
+        if (serial_offset == COMMAND_LENGTH)
+        {
+            shift_left(serial_buffer);
+            serial_offset = COMMAND_LENGTH - 8;
+        }
 	}
 }
 
-void serial_init()
+void serial_check()
 {
+    EVENTS event;
+    uint8_t buffer[COMMAND_LENGTH];
+    uint8_t i;
+
+    __disable_irq();
+    for(i = 0; i < COMMAND_LENGTH; i++)
+    	buffer[i] = serial_buffer[i];
+    __enable_irq();
+    __ISB();
+
+    if (serial_offset)
+    {
+    	if (find_command(buffer, &event) == 1)
+    	{
+    		queue_put(event);
+    		serial_offset = 0;
+    	}
+    }
 
 }
 
